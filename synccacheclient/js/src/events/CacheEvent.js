@@ -2,53 +2,55 @@
 // Annotations
 //-------------------------------------------------------------------------------
 
-//@Package('synccacheserver')
+//@Package('synccacheclient')
 
-//@Export('CacheException')
+//@Export('CacheEvent')
 
 //@Require('Class')
-//@Require('Exception')
+//@Require('Event')
 
 
 //-------------------------------------------------------------------------------
 // Common Modules
 //-------------------------------------------------------------------------------
 
-var bugpack         = require('bugpack').context();
+var bugpack = require('bugpack').context();
 
 
 //-------------------------------------------------------------------------------
-// Bugpack Modules
+// BugPack
 //-------------------------------------------------------------------------------
 
-var Class               = bugpack.require('Class');
-var Exception           = bugpack.require('Exception');
+var Class   = bugpack.require('Class');
+var Event   = bugpack.require('Event');
 
 
 //-------------------------------------------------------------------------------
 // Declare Class
 //-------------------------------------------------------------------------------
 
-var CacheException = Class.extend(Exception, {});
+var CacheEvent = Class.extend(Event, {});
 
 
 //-------------------------------------------------------------------------------
-// Static Properties
+// Static Variables
 //-------------------------------------------------------------------------------
 
 /**
+ * @static
  * @const {string}
  */
-CacheException.NO_CACHE = "CacheException:NoCache";
+CacheEvent.DELETE = "CacheEvent:Delete";
 
 /**
+ * @static
  * @const {string}
  */
-CacheException.KEY_EXISTS = "CacheException:KeyExists";
+CacheEvent.SET = "CacheEvent:Set";
 
 
 //-------------------------------------------------------------------------------
 // Exports
 //-------------------------------------------------------------------------------
 
-bugpack.export('synccacheserver.CacheException', CacheException);
+bugpack.export('synccacheclient.CacheEvent', CacheEvent);

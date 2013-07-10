@@ -10,9 +10,6 @@
 //@Require('Class')
 //@Require('Obj')
 //@Require('annotate.Annotate')
-//@Require('bugcall.BugCallClient')
-//@Require('bugcall.CallClient')
-//@Require('bugcall.CallManager')
 //@Require('bugflow.BugFlow')
 //@Require('bugioc.ArgAnnotation')
 //@Require('bugioc.ConfigurationAnnotation')
@@ -20,13 +17,12 @@
 //@Require('bugioc.ModuleAnnotation')
 //@Require('bugioc.PropertyAnnotation')
 //@Require('bugroutes.BugCallRouter')
-//@Require('socketio:client.SocketIoClient')
-//@Require('socketio:client.SocketIoConfig')
 //@Require('socketio:factoryserver.ServerSocketIoFactory')
-//@Require('synccacheclient.SyncCacheClient')
-//@Require('synccacheclient.SyncCacheClientController')
-//@Require('synccacheclient.SyncCacheClientManager')
-//@Require('synccacheclient.SyncCacheClientService')
+//@Require('synccacheclient.CacheManager')
+//@Require('synccacheclient.ClientCacheController')
+//@Require('synccacheclient.ClientCacheService')
+//@Require('synccacheclient.ConsumerManager')
+//@Require('synccacheclient.ServerCacheApi')
 
 
 //-------------------------------------------------------------------------------
@@ -46,9 +42,6 @@ var path                    = require('path');
 var Class                       = bugpack.require('Class');
 var Obj                         = bugpack.require('Obj');
 var Annotate                    = bugpack.require('annotate.Annotate');
-var BugCallClient               = bugpack.require('bugcall.BugCallClient');
-var CallClient                  = bugpack.require('bugcall.CallClient');
-var CallManager                 = bugpack.require('bugcall.CallManager');
 var BugFlow                     = bugpack.require('bugflow.BugFlow');
 var ArgAnnotation               = bugpack.require('bugioc.ArgAnnotation');
 var ConfigurationAnnotation     = bugpack.require('bugioc.ConfigurationAnnotation');
@@ -56,14 +49,12 @@ var IConfiguration              = bugpack.require('bugioc.IConfiguration');
 var ModuleAnnotation            = bugpack.require('bugioc.ModuleAnnotation');
 var PropertyAnnotation          = bugpack.require('bugioc.PropertyAnnotation');
 var BugCallRouter               = bugpack.require('bugroutes.BugCallRouter');
-var SocketIoClient              = bugpack.require('socketio:client.SocketIoClient');
-var SocketIoConfig              = bugpack.require('socketio:client.SocketIoConfig');
 var ServerSocketIoFactory       = bugpack.require('socketio:factoryserver.ServerSocketIoFactory');
-var CallService                 = bugpack.require('syncbugserver.CallService');
-var SyncCacheClient             = bugpack.require('synccacheclient.SyncCacheClient');
-var SyncCacheClientController   = bugpack.require('synccacheclient.SyncCacheClientController');
-var SyncCacheClientManager      = bugpack.require('synccacheclient.SyncCacheClientManager');
-var SyncCacheClientService      = bugpack.require('synccacheclient.SyncCacheClientService');
+var CacheManager                = bugpack.require('synccacheclient.CacheManager');
+var ClientCacheController       = bugpack.require('synccacheclient.ClientCacheController');
+var ClientCacheService          = bugpack.require('synccacheclient.ClientCacheService');
+var ConsumerManager             = bugpack.require('synccacheclient.ConsumerManager');
+var ServerCacheApi              = bugpack.require('synccacheclient.ServerCacheApi');
 
 
 //-------------------------------------------------------------------------------
@@ -102,9 +93,9 @@ var SyncCacheClientConfiguration = Class.extend(Obj, {
 
         /**
          * @private
-         * @type {BugCallClient}
+         * @type {ConsumerManager}
          */
-        this._bugCallClient     = null;
+        this._consumerManager     = null;
 
         /**
          * @private
@@ -114,12 +105,6 @@ var SyncCacheClientConfiguration = Class.extend(Obj, {
          * }}
          */
         this._config            = null;
-
-        /**
-         * @private
-         * @type {SocketIoConfig}
-         */
-        this._socketIoConfig    = null;
     },
 
 
@@ -133,52 +118,56 @@ var SyncCacheClientConfiguration = Class.extend(Obj, {
     initializeConfiguration: function(callback) {
         var _this = this;
         console.log("Initializing SyncCacheClientConfiguration");
-
-        var config = this._config;
-
-
-        this._socketIoConfig.setResource("/api/socket");
-
         $series([
             $task(function(flow) {
-                _this.bugCallClient.openConnection();
-                flow.complete();
+                _this._consumerManager.initialize(function(error) {
+                    flow.complete(error);
+                });
             })
         ]).execute(callback);
     },
 
 
     /**
-     * @param {BugCallClient} bugCallClient
+     * @param {EventDispatcher} bugCallRequestEventDispatcher
      * @return {BugCallRouter}
      */
-    bugCallRouter: function(bugCallClient) {
-        return new BugCallRouter(bugCallClient);
+    bugCallRouter: function(bugCallRequestEventDispatcher) {
+        return new BugCallRouter(bugCallRequestEventDispatcher);
     },
 
     /**
-     * @param {CallClient} callClient
-     * @param {CallManager} callManager
-     * @return {BugCallClient}
+     * @return {CacheManager}
      */
-    bugCallClient: function(callClient, callManager) {
-        this._bugCallClient = new BugCallClient(callClient, callManager);
-        return this._bugCallClient;
+    cacheManager: function() {
+        return new CacheManager();
     },
 
     /**
-     * @param {SocketIoClient} socketIoClient
-     * @return {CallClient}
+     * @param {BugCallRouter} bugCallRouter
+     * @param {ClientCacheService} clientCacheService
+     * @return {*}
      */
-    callClient: function(socketIoClient) {
-        return new CallClient(socketIoClient);
+    clientCacheController: function(bugCallRouter, clientCacheService) {
+        return new ClientCacheController(bugCallRouter, clientCacheService);
+    },
+    
+    /**
+     * @param {CacheManager} cacheManager
+     * @return {ClientCacheService}
+     */
+    clientCacheService: function(cacheManager) {
+        return new ClientCacheService(cacheManager);
     },
 
     /**
-     * @return {CallManager}
+     * @param {{}} config
+     * @param {CacheManager} cacheManager
+     * @param {ServerSocketIoFactory} serverSocketIoFactory
+     * @return {ConsumerManager}
      */
-    callManager: function() {
-        return new CallManager();
+    consumerManager: function(config, cacheManager, serverSocketIoFactory) {
+        return new ConsumerManager(config, cacheManager, serverSocketIoFactory);
     },
 
     /**
@@ -189,27 +178,18 @@ var SyncCacheClientConfiguration = Class.extend(Obj, {
     },
 
     /**
+     * @param {ConsumerManager} consumerManager
+     * @return {ServerCacheApi}
+     */
+    serverCacheApi: function(consumerManager) {
+        return new ServerCacheApi(consumerManager);
+    },
+
+    /**
      * @return {ServerSocketIoFactory}
      */
     serverSocketIoFactory: function() {
         return new ServerSocketIoFactory();
-    },
-
-    /**
-     * @param {ISocketFactory} socketIoFactory
-     * @param {SocketIoConfig} socketIoConfig
-     * @return {SocketIoClient}
-     */
-    socketIoClient: function(socketIoFactory, socketIoConfig) {
-        return new SocketIoClient(socketIoFactory, socketIoConfig);
-    },
-
-    /**
-     * @return {SocketIoConfig}
-     */
-    socketIoConfig: function() {
-        this._socketIoConfig = new SocketIoConfig({});
-        return this._socketIoConfig;
     }
 });
 
@@ -234,6 +214,10 @@ annotate(SyncCacheClientConfiguration).with(
         //-------------------------------------------------------------------------------
 
         module("config"),
+        module("serverCacheApi")
+            .args([
+                arg("consumerManager").ref("consumerManager")
+            ]),
 
 
         //-------------------------------------------------------------------------------
@@ -241,12 +225,6 @@ annotate(SyncCacheClientConfiguration).with(
         //-------------------------------------------------------------------------------
 
         module("serverSocketIoFactory"),
-        module("socketIoClient")
-            .args([
-                arg("socketIoFactory").ref("serverSocketIoFactory"),
-                arg("socketIoConfig").ref("socketIoConfig")
-            ]),
-        module("socketIoConfig"),
 
 
         //-------------------------------------------------------------------------------
@@ -255,28 +233,18 @@ annotate(SyncCacheClientConfiguration).with(
 
         module("bugCallRouter")
             .args([
-                arg("bugCallClient").ref("bugCallClient")
+                arg("consumerManager").ref("bugCallRequestEventDispatcher")
             ]),
-        module("bugCallClient")
-            .args([
-                arg("callClient").ref("callClient"),
-                arg("callManager").ref("callManager")
-            ]),
-        module("callClient")
-            .args([
-                arg("socketIoClient").ref("socketIoClient")
-            ]),
-        module("callManager"),
 
 
         //-------------------------------------------------------------------------------
         // Controllers
         //-------------------------------------------------------------------------------
 
-        module("syncCacheClientController")
+        module("clientCacheController")
             .args([
                 arg("bugCallRouter").ref("bugCallRouter"),
-                arg("syncCacheClientService").ref("syncCacheClientService")
+                arg("clientCacheService").ref("clientCacheService")
             ]),
 
 
@@ -284,10 +252,9 @@ annotate(SyncCacheClientConfiguration).with(
         // Services
         //-------------------------------------------------------------------------------
 
-        module("callService"),
-        module("syncCacheClientService")
+        module("clientCacheService")
             .args([
-                arg("syncCacheClientManager").ref("syncCacheClientManager")
+                arg("cacheManager").ref("cacheManager")
             ]),
 
 
@@ -295,7 +262,13 @@ annotate(SyncCacheClientConfiguration).with(
         // Managers
         //-------------------------------------------------------------------------------
 
-        module("syncCacheClientManager")
+        module("cacheManager"),
+        module("consumerManager")
+            .args([
+                arg("config").ref("config"),
+                arg("cacheManager").ref("cacheManager"),
+                arg("serverSocketIoFactory").ref("serverSocketIoFactory")
+            ])
     ])
 );
 

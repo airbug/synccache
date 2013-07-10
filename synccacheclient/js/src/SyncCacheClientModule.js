@@ -8,7 +8,7 @@
 //@Autoload
 
 //@Require('Class')
-//@Require('Obj')
+//@Require('EventReceiver')
 //@Require('Proxy')
 //@Require('bugioc.ApplicationContext')
 //@Require('bugioc.ConfigurationScan')
@@ -69,11 +69,15 @@ var SyncCacheClientModule = Class.extend(EventReceiver, {
          */
         this.started            = false;
 
-        Proxy.proxy(this, Proxy.method(this.getSyncCacheClient, this), [
+        Proxy.proxy(this, Proxy.method(this.getServerCacheApi, this), [
+            "acquireLock",
+            "add",
             "delete",
             "get",
+            "releaseLock",
             "set",
             "sync",
+            "syncAll",
             "unsync"
         ]);
     },
@@ -93,24 +97,23 @@ var SyncCacheClientModule = Class.extend(EventReceiver, {
     },
 
     /**
-     * @return {SyncCacheClient}
+     * @return {ServerCacheApi}
      */
-    getSyncCacheClient: function() {
-        return this.applicationContext.generateModuleByName("syncCacheClient");
+    getServerCacheApi: function() {
+        return this.applicationContext.generateModuleByName("serverCacheApi");
     },
 
     /**
-     * @return {SyncCacheClientService}
+     * @return {ClientCacheService}
      */
-    getSyncCacheClientService: function() {
-        return this.applicationContext.generateModuleByName("syncCacheClientService");
+    getClientCacheService: function() {
+        return this.applicationContext.generateModuleByName("clientCacheService");
     },
 
 
     //-------------------------------------------------------------------------------
     // Public Class Methods
     //-------------------------------------------------------------------------------
-
 
     /**
      * @param {{
@@ -122,7 +125,7 @@ var SyncCacheClientModule = Class.extend(EventReceiver, {
         if (!this.started) {
             this.configurationScan.scan();
             this.applicationContext.process();
-            this.getSyncCacheClientService().addedEventPropagator(this);
+            this.getClientCacheService().addedEventPropagator(this);
 
             var config = this.getConfig();
             if (options.syncCacheIps) {
@@ -139,7 +142,7 @@ var SyncCacheClientModule = Class.extend(EventReceiver, {
                 }
             });
         } else {
-            throw new Error("SyncCacheClient already started");
+            throw new Error("ServerCacheConsumer already started");
         }
     }
 });

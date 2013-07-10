@@ -2,56 +2,52 @@
 // Annotations
 //-------------------------------------------------------------------------------
 
-//@Package('synccacheclient')
+//@Package('synccache')
 
-//@Export('SyncCacheEvent')
+//@Export('SyncCacheDefines')
 
 //@Require('Class')
-//@Require('Event')
+//@Require('Obj')
 
 
 //-------------------------------------------------------------------------------
 // Common Modules
 //-------------------------------------------------------------------------------
 
-var bugpack = require('bugpack').context();
+var bugpack         = require('bugpack').context();
 
 
 //-------------------------------------------------------------------------------
-// BugPack
+// Bugpack Modules
 //-------------------------------------------------------------------------------
 
-var Class   = bugpack.require('Class');
-var Event   = bugpack.require('Event');
+var Class               = bugpack.require('Class');
+var Obj                 = bugpack.require('Obj');
 
 
 //-------------------------------------------------------------------------------
 // Declare Class
 //-------------------------------------------------------------------------------
 
-var SyncCacheEvent = Class.extend(Event, {});
+var SyncCacheDefines = Class.extend(Obj, {});
 
 
 //-------------------------------------------------------------------------------
-// Static Variables
+// Static Properties
 //-------------------------------------------------------------------------------
 
-
 /**
- * @static
- * @const {string}
+ * @enum {string}
  */
-SyncCacheEvent.DELETE = "SyncCacheEvent:Delete";
-
-/**
- * @static
- * @const {string}
- */
-SyncCacheEvent.SET = "SyncCacheEvent:Set";
+SyncCacheDefines.LockType = {
+    READ: "read",
+    READ_WRITE: "readWrite",
+    WRITE: "write"
+};
 
 
 //-------------------------------------------------------------------------------
 // Exports
 //-------------------------------------------------------------------------------
 
-bugpack.export('synccacheclient.SyncCacheEvent', SyncCacheEvent);
+bugpack.export('synccache.SyncCacheDefines', SyncCacheDefines);

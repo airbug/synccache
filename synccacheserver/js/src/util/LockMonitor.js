@@ -4,11 +4,12 @@
 
 //@Package('synccacheserver')
 
-//@Export('SyncCacheServerManager')
+//@Export('LockMonitor')
 
 //@Require('Class')
-//@Require('Map')
+//@Require('Lock')
 //@Require('Obj')
+//@Require('bugcall.CallEvent')
 
 
 //-------------------------------------------------------------------------------
@@ -22,22 +23,27 @@ var bugpack = require('bugpack').context();
 // BugPack
 //-------------------------------------------------------------------------------
 
-var Class   = bugpack.require('Class');
-var Map     = bugpack.require('Map');
-var Obj     = bugpack.require('Obj');
+var Class       = bugpack.require('Class');
+var Lock        = bugpack.require('Lock');
+var Obj         = bugpack.require('Obj');
+var CallEvent   = bugpack.require('bugcall.CallEvent');
 
 
 //-------------------------------------------------------------------------------
-// Class
+// Declare Class
 //-------------------------------------------------------------------------------
 
-var SyncCacheServerManager = Class.extend(Obj, {
+var LockMonitor = Class.extend(Obj, {
 
     //-------------------------------------------------------------------------------
     // Constructor
     //-------------------------------------------------------------------------------
 
-    _constructor: function() {
+    /**
+     * @param {EventDispatcher} target
+     * @param {Lock} lock
+     */
+    _constructor: function(target, lock) {
 
         this._super();
 
@@ -47,9 +53,15 @@ var SyncCacheServerManager = Class.extend(Obj, {
 
         /**
          * @private
-         * @type {Map.<string, *>}
+         * @type {EventDispatcher}
          */
-        this.syncCacheMap  = new Map();
+        this.target     = target;
+
+        /**
+         * @private
+         * @type {Lock}
+         */
+        this.lock       = lock;
     },
 
 
@@ -58,28 +70,37 @@ var SyncCacheServerManager = Class.extend(Obj, {
     //-------------------------------------------------------------------------------
 
     /**
-     * @param {string} cacheKey
-     * @return {(* | undefined)}
+     *
      */
-    findCacheByCacheKey: function(cacheKey) {
-        return this.syncCacheMap.get(cacheKey);
+    deinitialize: function() {
+        this.target.off(CallEvent.CLOSED, this.hearCallClosed, this);
     },
 
     /**
-     * @param {string} cacheKey
-     * @return {*}
+     *
      */
-    removeCacheByCacheKey: function(cacheKey) {
-        return this.syncCacheMap.remove(cacheKey);
+    initialize: function() {
+
+        // First we must acquire the lock
+        // Then we listen to the CallManager call drops
+        // Also start listening for the lock to release
+        // If the callmanager drops before the lock is released, we need to unlock the lock
+        // when the lock releases, then we need to remove the listeners
+
+        this.target.on(CallEvent.CLOSED, this.hearCallClosed, this);
     },
 
+
+    //-------------------------------------------------------------------------------
+    // Event Listeners
+    //-------------------------------------------------------------------------------
+
     /**
-     * @param {string} cacheKey
-     * @param {*} cache
-     * @return {(* | undefined)}
+     * @private
+     * @param {CallEvent} event
      */
-    createOrUpdateCache: function(cacheKey, cache) {
-        return this.syncCacheMap.put(cacheKey, cache);
+    hearCallClosed: function(event) {
+        this.lock.unlock();
     }
 });
 
@@ -88,4 +109,4 @@ var SyncCacheServerManager = Class.extend(Obj, {
 // Exports
 //-------------------------------------------------------------------------------
 
-bugpack.export('synccacheserver.SyncCacheServerManager', SyncCacheServerManager);
+bugpack.export('synccacheserver.LockMonitor', LockMonitor);

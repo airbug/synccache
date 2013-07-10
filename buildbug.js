@@ -81,7 +81,7 @@ buildProperties({
         clientJson: {
             name: "synccache",
             version: "0.0.1",
-            main: "./lib/SyncCacheClient.js"
+            main: "./lib/SyncCacheClientModule.js"
         },
         sourcePaths: [
             "./projects/syncbugserverclient/js/src",

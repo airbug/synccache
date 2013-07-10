@@ -26,10 +26,12 @@
 //@Require('socketio:server.SocketIoManager')
 //@Require('socketio:server.SocketIoServer')
 //@Require('socketio:server.SocketIoServerConfig')
-//@Require('synccacheserver.CallService')
-//@Require('synccacheserver.SyncCacheServerController')
-//@Require('synccacheserver.SyncCacheServerManager')
-//@Require('synccacheserver.SyncCacheServerService')
+//@Require('synccacheserver.CacheManager')
+//@Require('synccacheserver.ClientCacheApi')
+//@Require('synccacheserver.ConsumerManager')
+//@Require('synccacheserver.LockManager')
+//@Require('synccacheserver.ServerCacheController')
+//@Require('synccacheserver.ServerCacheService')
 
 
 //-------------------------------------------------------------------------------
@@ -65,10 +67,12 @@ var Handshaker                  = bugpack.require('handshaker.Handshaker');
 var SocketIoManager             = bugpack.require('socketio:server.SocketIoManager');
 var SocketIoServer              = bugpack.require('socketio:server.SocketIoServer');
 var SocketIoServerConfig        = bugpack.require('socketio:server.SocketIoServerConfig');
-var CallService                 = bugpack.require('synccacheserver.CallService');
-var SyncCacheServerController   = bugpack.require('synccacheserver.SyncCacheServerController');
-var SyncCacheServerManager      = bugpack.require('synccacheserver.SyncCacheServerManager');
-var SyncCacheServerService      = bugpack.require('synccacheserver.SyncCacheServerService');
+var CacheManager                = bugpack.require('synccacheserver.CacheManager');
+var ClientCacheApi              = bugpack.require('synccacheserver.ClientCacheApi');
+var ConsumerManager             = bugpack.require('synccacheserver.ConsumerManager');
+var LockManager                 = bugpack.require('synccacheserver.LockManager');
+var ServerCacheController       = bugpack.require('synccacheserver.ServerCacheController');
+var ServerCacheService          = bugpack.require('synccacheserver.ServerCacheService');
 
 
 //-------------------------------------------------------------------------------
@@ -141,9 +145,9 @@ var SyncCacheServerConfiguration = Class.extend(Obj, {
 
         /**
          * @private
-         * @type {SyncCacheServerController}
+         * @type {ServerCacheController}
          */
-        this._syncCachServerController  = null;
+        this._serverCacheController  = null;
     },
 
 
@@ -179,9 +183,9 @@ var SyncCacheServerConfiguration = Class.extend(Obj, {
             //-------------------------------------------------------------------------------
 
             $task(function(flow) {
-                _this._syncCachServerController.configure(function(error) {
+                _this._serverCacheController.configure(function(error) {
                     if (!error) {
-                        console.log("syncCacheServerController configured");
+                        console.log("serverCacheController configured");
                     }
                     flow.complete(error);
                 })
@@ -243,19 +247,26 @@ var SyncCacheServerConfiguration = Class.extend(Obj, {
     },
 
     /**
+     * @return {CacheManager}
+     */
+    cacheManager: function() {
+        return new CacheManager();
+    },
+
+    /**
      * @param {SocketIoManager}
-        * @return {CallServer}
+     * @return {CallServer}
      */
     callServer: function(socketIoManager) {
         return new CallServer(socketIoManager);
     },
 
     /**
-     * @param {BugCallServer} bugCallServer
-     * @return {CallService}
+     * @param {ConsumerManager} consumerManager
+     * @return {ClientCacheApi}
      */
-    callService: function(bugCallServer) {
-        return new CallService(bugCallServer);
+    clientCacheApi: function(consumerManager) {
+        return new ClientCacheApi(consumerManager);
     },
 
     /**
@@ -264,6 +275,14 @@ var SyncCacheServerConfiguration = Class.extend(Obj, {
     config: function() {
         this._config = this.loadConfig(this._configFilePath);
         return this._config;
+    },
+
+    /**
+     * @param {BugCallServer} bugCallServer
+     * @return {ConsumerManager}
+     */
+    consumerManager: function(bugCallServer) {
+        return new ConsumerManager(bugCallServer);
     },
 
     /**
@@ -290,6 +309,13 @@ var SyncCacheServerConfiguration = Class.extend(Obj, {
     handshaker: function() {
         this._handshaker = new Handshaker([]);
         return this._handshaker;
+    },
+
+    /**
+     * @return {LockManager}
+     */
+    lockManager: function() {
+        return new LockManager();
     },
 
     /**
@@ -320,29 +346,24 @@ var SyncCacheServerConfiguration = Class.extend(Obj, {
 
     /**
      * @param {BugCallRouter} bugCallRouter
-     * @param {SyncCacheServerService} syncCacheServerService
+     * @param {ConsumerManager} consumerManager
+     * @param {ServerCacheService} serverCacheService
      * @return {SyncbugController}
      */
-    syncCacheServerController: function(bugCallRouter, syncCacheServerService) {
-        this._syncCacheServerController = new SyncbugController(bugCallRouter, syncCacheServerService);
-        return this._syncCacheServerController;
+    serverCacheController: function(bugCallRouter, consumerManager, serverCacheService) {
+        this._serverCacheController = new ServerCacheController(bugCallRouter, consumerManager, serverCacheService);
+        return this._serverCacheController;
     },
 
     /**
-     * @return {SyncCacheServerManager}
+     * @param {CacheManager} cacheManager
+     * @param {ConsumerManager} consumerManager
+     * @param {LockManager} lockManager
+     * @param {ClientCacheApi} clientCacheApi
+     * @return {ServerCacheService}
      */
-    syncCacheServerManager: function() {
-        return new SyncCacheServerManager();
-    },
-
-    /**
-     * @param {BugCallServer} bugCallServer
-     * @param {CallService} callService
-     * @param {SyncCacheServerManager} syncCacheServerManager
-     * @return {SyncCacheServerService}
-     */
-    syncCacheServerService: function(bugCallServer, callService, syncCacheServerManager) {
-        return new SyncCacheServerService(bugCallServer, callService, syncCacheServerManager);
+    serverCacheService: function(cacheManager, consumerManager, lockManager, clientCacheApi) {
+        return new ServerCacheService(cacheManager, consumerManager, lockManager, clientCacheApi);
     },
 
 
@@ -401,7 +422,6 @@ annotate(SyncCacheServerConfiguration).with(
         //-------------------------------------------------------------------------------
 
         module("config"),
-        module("mongoose"),
 
 
         //-------------------------------------------------------------------------------
@@ -464,10 +484,11 @@ annotate(SyncCacheServerConfiguration).with(
         // Controllers
         //-------------------------------------------------------------------------------
 
-        module("syncCacheServerController")
+        module("serverCacheController")
             .args([
                 arg("bugCallRouter").ref("bugCallRouter"),
-                arg("syncCacheServerService").ref("syncCacheServerService")
+                arg("consumerManager").ref("consumerManager"),
+                arg("serverCacheService").ref("serverCacheService")
             ]),
 
 
@@ -475,14 +496,12 @@ annotate(SyncCacheServerConfiguration).with(
         // Services
         //-------------------------------------------------------------------------------
 
-        module("callService")
+        module("serverCacheService")
             .args([
-                arg("bugCallServer").ref("bugCallServer")
-            ]),
-        module("syncCacheServerService")
-            .args([
-                arg("callService").ref("callService"),
-                arg("syncCacheServerManager").ref("syncCacheServerManager")
+                arg("cacheManager").ref("cacheManager"),
+                arg("consumerManager").ref("consumerManager"),
+                arg("lockManager").ref("lockManager"),
+                arg("clientCacheApi").ref("clientCacheApi")
             ]),
 
 
@@ -490,7 +509,22 @@ annotate(SyncCacheServerConfiguration).with(
         // Managers
         //-------------------------------------------------------------------------------
 
-        module("syncCacheServerManager")
+        module("cacheManager"),
+        module("consumerManager")
+            .args([
+                arg("bugCallServer")
+            ]),
+        module("lockManager"),
+
+
+        //-------------------------------------------------------------------------------
+        // Apis
+        //-------------------------------------------------------------------------------
+
+        module("clientCacheApi")
+            .args([
+                arg("consumerManager").ref("consumerManager")
+            ])
     ])
 );
 
