@@ -10,6 +10,8 @@
 //@Require('Class')
 //@Require('Obj')
 //@Require('annotate.Annotate')
+//@Require('bugatomic.BugAtomic')
+//@Require('bugatomic.LockOperator')
 //@Require('bugcall.BugCallServer')
 //@Require('bugcall.CallServer')
 //@Require('bugflow.BugFlow')
@@ -51,6 +53,8 @@ var path                    = require('path');
 var Class                       = bugpack.require('Class');
 var Obj                         = bugpack.require('Obj');
 var Annotate                    = bugpack.require('annotate.Annotate');
+var BugAtomic                   = bugpack.require('bugatomic.BugAtomic');
+var LockOperator                = bugpack.require('bugatomic.LockOperator');
 var BugCallServer               = bugpack.require('bugcall.BugCallServer');
 var CallServer                  = bugpack.require('bugcall.CallServer');
 var BugFlow                     = bugpack.require('bugflow.BugFlow');
@@ -229,6 +233,14 @@ var SyncCacheServerConfiguration = Class.extend(Obj, {
         ]).execute(callback);
     },
 
+    /**
+     * @private
+     * @return {BugAtomic}
+     */
+    bugAtomic: function() {
+        var lockOperator = new LockOperator(1000);
+        return new BugAtomic(lockOperator);
+    },
 
     /**
      * @param {BugCallServer} bugCallServer
@@ -314,8 +326,8 @@ var SyncCacheServerConfiguration = Class.extend(Obj, {
     /**
      * @return {LockManager}
      */
-    lockManager: function() {
-        return new LockManager();
+    lockManager: function(bugAtomic) {
+        return new LockManager(bugAtomic.getLockOperator());
     },
 
     /**
@@ -356,14 +368,15 @@ var SyncCacheServerConfiguration = Class.extend(Obj, {
     },
 
     /**
+     * @param {BugAtomic} bugAtomic
      * @param {CacheManager} cacheManager
      * @param {ConsumerManager} consumerManager
      * @param {LockManager} lockManager
      * @param {ClientCacheApi} clientCacheApi
      * @return {ServerCacheService}
      */
-    serverCacheService: function(cacheManager, consumerManager, lockManager, clientCacheApi) {
-        return new ServerCacheService(cacheManager, consumerManager, lockManager, clientCacheApi);
+    serverCacheService: function(bugAtomic, cacheManager, consumerManager, lockManager, clientCacheApi) {
+        return new ServerCacheService(bugAtomic, cacheManager, consumerManager, lockManager, clientCacheApi);
     },
 
 

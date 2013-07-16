@@ -124,17 +124,6 @@ var ConsumerManager = Class.extend(Obj, {
     },
 
     /**
-     * @param {Array.<string>} cacheKeyArray
-     * @param {ClientCacheConsumer} callManager
-     */
-    syncConsumerForCacheKeyArray: function(cacheKeyArray, callManager) {
-        var _this = this;
-        cacheKeyArray.forEach(function(cacheKey) {
-            _this.syncConsumerForCacheKey(cacheKey, callManager);
-        });
-    },
-
-    /**
      * @param {string} cacheKey
      * @param {ClientCacheConsumer} consumer
      */

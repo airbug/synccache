@@ -9,6 +9,7 @@
 //@Require('Class')
 //@Require('Obj')
 //@Require('bugatomic.BugAtomic')
+//@Require('bugatomic.LockOperator')
 //@Require('bugflow.BugFlow'))
 
 
@@ -27,6 +28,7 @@ var Class               = bugpack.require('Class');
 var Obj                 = bugpack.require('Obj');
 var BugAtomic           = bugpack.require('bugatomic.BugAtomic');
 var BugFlow             = bugpack.require('bugflow.BugFlow');
+var LockOperator        = bugpack.require('bugatomic.LockOperator');
 
 
 //-------------------------------------------------------------------------------
@@ -59,7 +61,7 @@ var ClientCacheApi = Class.extend(Obj, {
          * @private
          * @type {BugAtomic}
          */
-        this.bugAtomic          = new BugAtomic(1);
+        this.bugAtomic          = new BugAtomic(new LockOperator(1000));
 
         /**
          * @private
@@ -83,7 +85,7 @@ var ClientCacheApi = Class.extend(Obj, {
         // change underneath us while this call is queued.
 
         var consumerSet = this.consumerManager.getConsumerSetByCacheKey(key).clone();
-        this.bugAtomic.operation(key, true, function(operation) {
+        this.bugAtomic.operation(key, "delete", ["write"], false, function(operation) {
             $iterableParallel(consumerSet, function(flow, consumer) {
                 consumer.delete(key, function(error) {
                     flow.callback(error);
@@ -106,7 +108,7 @@ var ClientCacheApi = Class.extend(Obj, {
         // change underneath us while this call is queued.
 
         var consumerSet = this.consumerManager.getConsumerSetByCacheKey(key).clone();
-        this.bugAtomic.operation(key, true, function(operation) {
+        this.bugAtomic.operation(key, "set", ["write"], false, function(operation) {
             $iterableParallel(consumerSet, function(flow, consumer) {
                 consumer.set(key, function(error) {
                     flow.callback(error);

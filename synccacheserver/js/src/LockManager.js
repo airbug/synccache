@@ -59,9 +59,9 @@ var LockManager = Class.extend(Obj, {
     //-------------------------------------------------------------------------------
 
     /**
-     *
+     * @param {ILockOperator}
      */
-    _constructor: function() {
+    _constructor: function(lockOperator) {
 
         this._super();
 
@@ -71,21 +71,15 @@ var LockManager = Class.extend(Obj, {
 
         /**
          * @private
+         * @type {ILockOperator}
+         */
+        this.lockOperator           = lockOperator;
+
+        /**
+         * @private
          * @type {Set.<LockMonitor>}
          */
         this.lockToLockMonitorMap   = new Map();
-
-        /**
-         * @private
-         * @type {LockStriped}
-         */
-        this.readLockStriped        = new LockStriped(1000);
-
-        /**
-         * @private
-         * @type {Semaphore}
-         */
-        this.writeLockStriped       = new LockStriped(1000);
     },
 
 
@@ -224,10 +218,7 @@ var LockManager = Class.extend(Obj, {
      * @param {function(Lock)} callback
      */
     acquireReadLock: function(key, callback) {
-        var readLock = this.readLockStriped.getForKey(key);
-        readLock.tryLock(function() {
-            callback(readLock);
-        });
+        this.lockOperator.acquireLock(key, SyncCacheDefines.LockType.READ, callback);
     },
 
     /**
@@ -236,10 +227,7 @@ var LockManager = Class.extend(Obj, {
      * @param {function(Lock)} callback
      */
     acquireWriteLock: function(key, callback) {
-        var writeLock = this.writeLockStriped.getForKey(key);
-        writeLock.tryLock(function() {
-            callback(writeLock);
-        });
+        this.lockOperator.acquireLock(key, SyncCacheDefines.LockType.WRITE, callback);
     },
 
     /**

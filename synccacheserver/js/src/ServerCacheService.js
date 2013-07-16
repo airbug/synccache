@@ -39,9 +39,10 @@ var CacheException      = bugpack.require('synccacheserver.CacheException');
 // Simplify References
 //-------------------------------------------------------------------------------
 
-var $if             = BugFlow.$if;
-var $series         = BugFlow.$series;
-var $task           = BugFlow.$task;
+var $forEachParallel    = BugFlow.$forEachParallel;
+var $if                 = BugFlow.$if;
+var $series             = BugFlow.$series;
+var $task               = BugFlow.$task;
 
 
 //-------------------------------------------------------------------------------
@@ -55,18 +56,25 @@ var ServerCacheService = Class.extend(Obj, {
     //-------------------------------------------------------------------------------
 
     /**
+     * @param {BugAtomic} bugAtomic
      * @param {CacheManager} cacheManager
      * @param {ConsumerManager} consumerManager
      * @param {LockManager} lockManager
      * @param {ClientCacheApi} clientCacheApi
      */
-    _constructor: function(cacheManager, consumerManager, lockManager, clientCacheApi) {
+    _constructor: function(bugAtomic, cacheManager, consumerManager, lockManager, clientCacheApi) {
 
         this._super();
 
         //-------------------------------------------------------------------------------
         // Properties
         //-------------------------------------------------------------------------------
+
+        /**
+         * @private
+         * @type {BugAtomic}
+         */
+        this.bugAtomic              = bugAtomic;
 
         /**
          * @private
@@ -115,6 +123,13 @@ var ServerCacheService = Class.extend(Obj, {
         ]).executeFlow(callback);
     },
 
+    acquireAllLocks: function(consumer, keys, type, callback) {
+        //TODO BRN: Require all of these locks in a chain.
+        // A -> B - > C
+        // If this server is acquiring lock A, then it should make a client request to acquire B, and then the server
+        // that contains B should make a client request to acquire lock
+    },
+
     /**
      * @param {ClientCacheConsumer} consumer
      * @param {string} key
@@ -126,31 +141,28 @@ var ServerCacheService = Class.extend(Obj, {
      */
     add: function(consumer, key, value, options, callback) {
         var _this = this;
-        $series([
-            $if(function(flow) {
-                    flow.assert(options.sync);
-                },
+        this.bugAtomic.operation(key, "write", ["write", "read"], true, function(operation) {
+            $series([
                 $task(function(flow) {
-                    _this.sync(consumer, key, {}, function(error) {
-                        flow.complete(error);
-                    });
+                    if (!_this.cacheManager.hasCache(key)) {
+                        _this.setCache(key, value, options.consistency, function(error) {
+                            if (options.sync) {
+                                _this.consumerManager.syncConsumerForCacheKey(key, consumer);
+                            }
+                            flow.complete(error);
+                        });
+                    } else {
+                        flow.error(new CacheException(CacheException.KEY_EXISTS));
+                    }
                 })
-            ),
-            $task(function(flow) {
-                if (!_this.cacheManager.hasCache(key)) {
-                    _this.setCache(key, value, options.consistency, function(error) {
-                        flow.complete(error);
-                    })
+            ]).execute(function(error) {
+                operation.complete();
+                if (!error) {
+                    callback(undefined);
                 } else {
-                    flow.error(new CacheException(CacheException.KEY_EXISTS));
+                    callback(error);
                 }
-            })
-        ]).execute(function(error) {
-            if (!error) {
-                callback(undefined);
-            } else {
-                callback(error);
-            }
+            });
         });
     },
 
@@ -167,27 +179,30 @@ var ServerCacheService = Class.extend(Obj, {
         // consumers that they have been unsynced
 
         var _this = this;
-        $series([
-            $task(function(flow) {
-                _this.cacheManager.removeCache(key);
-                if (options.consistency === "strong") {
-                    _this.clientCacheApi.delete(key, function(error) {
-                        //TODO BRN: Handle exceptions and errors
-                        flow.complete(error);
-                    });
+        this.bugAtomic.operation(key, "write", ["write", "read"], true, function(operation) {
+            $series([
+                $task(function(flow) {
+                    _this.cacheManager.removeCache(key);
+                    if (options.consistency === "strong") {
+                        _this.clientCacheApi.delete(key, function(error) {
+                            //TODO BRN: Handle exceptions and errors
+                            flow.complete(error);
+                        });
+                    } else {
+                        _this.clientCacheApi.delete(key, function(error) {
+                            //TODO BRN: Handle exceptions and errors
+                        });
+                        flow.complete();
+                    }
+                })
+            ]).execute(function(error) {
+                operation.complete();
+                if (!error) {
+                    callback(null);
                 } else {
-                    _this.clientCacheApi.delete(key, function(error) {
-                        //TODO BRN: Handle exceptions and errors
-                    });
-                    flow.complete();
+                    callback(error);
                 }
-            })
-        ]).execute(function(error) {
-            if (!error) {
-                callback(null);
-            } else {
-                callback(error);
-            }
+            });
         });
     },
 
@@ -201,32 +216,29 @@ var ServerCacheService = Class.extend(Obj, {
      */
     get: function(consumer, key, options, callback) {
         var _this = this;
-        var value = undefined;
-        $series([
-            $if(function(flow) {
-                    flow.assert(options.sync);
-                },
+        this.bugAtomic.operation(key, "read", ["read"], true, function(operation) {
+            var value = undefined;
+            $series([
                 $task(function(flow) {
-                    _this.sync(consumer, key, {}, function(error) {
-                        flow.complete(error);
-                    });
+                    var cache = this.cacheManager.getCache(key);
+                    if (!TypeUtil.isUndefined(cache)) {
+                        value = cache;
+                        if (options.sync) {
+                            _this.consumerManager.syncConsumerForCacheKey(key, consumer);
+                        }
+                        flow.complete();
+                    } else {
+                        flow.error(new CacheException(CacheException.NO_CACHE));
+                    }
                 })
-            ),
-            $task(function(flow) {
-                var cache = this.cacheManager.getCache(key);
-                if (!TypeUtil.isUndefined(cache)) {
-                    value = cache;
-                    flow.complete();
+            ]).executeFlow(function(error) {
+                operation.complete();
+                if (!error) {
+                    callback(undefined, value);
                 } else {
-                    flow.error(new CacheException(CacheException.NO_CACHE));
+                    callback(error);
                 }
-            })
-        ]).executeFlow(function(error) {
-            if (!error) {
-                callback(undefined, value);
-            } else {
-                callback(error);
-            }
+            });
         });
     },
 
@@ -257,27 +269,24 @@ var ServerCacheService = Class.extend(Obj, {
      */
     set: function(consumer, key, value, options, callback) {
         var _this = this;
-        $series([
-            $if(function(flow) {
-                    flow.assert(options.sync);
-                },
+        this.bugAtomic.operation(key, "write", ["read", "write"], true, function(operation) {
+            $series([
                 $task(function(flow) {
-                    _this.sync(consumer, key, {}, function(error) {
+                    _this.setCache(key, value, options.consistency, function(error) {
+                        if (options.sync) {
+                            _this.consumerManager.syncConsumerForCacheKey(key, consumer);
+                        }
                         flow.complete(error);
                     });
                 })
-            ),
-            $task(function(flow) {
-                _this.setCache(key, value, options.consistency, function(error) {
-                    flow.complete(error);
-                })
-            })
-        ]).execute(function(error) {
-            if (!error) {
-                callback(undefined);
-            } else {
-                callback(error);
-            }
+            ]).execute(function(error) {
+                operation.complete();
+                if (!error) {
+                    callback(undefined);
+                } else {
+                    callback(error);
+                }
+            });
         });
     },
 
@@ -288,8 +297,12 @@ var ServerCacheService = Class.extend(Obj, {
      * @param {function(Exception} callback
      */
     sync: function(consumer, key, options, callback) {
-        this.consumerManager.syncConsumerForCacheKey(key, consumer);
-        callback();
+        var _this = this;
+        this.bugAtomic.operation(key, "write", ["write"], true, function(operation) {
+            _this.consumerManager.syncConsumerForCacheKey(key, consumer);
+            operation.complete();
+            callback();
+        });
     },
 
     /**
@@ -299,8 +312,12 @@ var ServerCacheService = Class.extend(Obj, {
      * @param {function(Exception)} callback
      */
     syncAll: function(consumer, keys, options, callback) {
-        this.consumerManager.syncConsumerForCacheKeyArray(keys, consumer);
-        callback();
+        var _this = this;
+        $forEachParallel(keys, function(flow, key) {
+            _this.sync(consumer, key, options, function(error) {
+                flow.complete(error);
+            });
+        }).execute(callback);
     },
 
     /**
@@ -310,8 +327,12 @@ var ServerCacheService = Class.extend(Obj, {
      * @param {function(Exception, Object} callback
      */
     unsync: function(consumer, key, options, callback) {
-        this.consumerManager.unsyncConsumerForCacheKey(key, consumer);
-        callback();
+        var _this = this;
+        this.bugAtomic.operation(key, "write", ["write"], true, function(operation) {
+            _this.consumerManager.unsyncConsumerForCacheKey(key, consumer);
+            operation.complete();
+            callback();
+        });
     },
 
 
