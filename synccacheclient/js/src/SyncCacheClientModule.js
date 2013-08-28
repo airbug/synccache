@@ -10,7 +10,7 @@
 //@Require('Class')
 //@Require('EventReceiver')
 //@Require('Proxy')
-//@Require('bugioc.ApplicationContext')
+//@Require('bugioc.IocContext')
 //@Require('bugioc.ConfigurationScan')
 
 
@@ -28,7 +28,7 @@ var bugpack = require('bugpack').context();
 var Class               = bugpack.require('Class');
 var EventReceiver       = bugpack.require('EventReceiver');
 var Proxy               = bugpack.require('Proxy');
-var ApplicationContext  = bugpack.require('bugioc.ApplicationContext');
+var IocContext          = bugpack.require('bugioc.IocContext');
 var ConfigurationScan   = bugpack.require('bugioc.ConfigurationScan');
 
 
@@ -53,15 +53,15 @@ var SyncCacheClientModule = Class.extend(EventReceiver, {
 
         /**
          * @private
-         * @type {ApplicationContext}
+         * @type {IocContext}
          */
-        this.applicationContext = new ApplicationContext();
+        this.iocContext = new IocContext();
 
         /**
          * @private
          * @type {ConfigurationScan}
          */
-        this.configurationScan  = new ConfigurationScan(this.applicationContext);
+        this.configurationScan  = new ConfigurationScan(this.iocContext);
 
         /**
          * @private
@@ -93,21 +93,21 @@ var SyncCacheClientModule = Class.extend(EventReceiver, {
      * }}
      */
     getConfig: function() {
-        return this.applicationContext.generateModuleByName("config");
+        return this.iocContext.generateModuleByName("config");
     },
 
     /**
      * @return {ServerCacheApi}
      */
     getServerCacheApi: function() {
-        return this.applicationContext.generateModuleByName("serverCacheApi");
+        return this.iocContext.generateModuleByName("serverCacheApi");
     },
 
     /**
      * @return {ClientCacheService}
      */
     getClientCacheService: function() {
-        return this.applicationContext.generateModuleByName("clientCacheService");
+        return this.iocContext.generateModuleByName("clientCacheService");
     },
 
 
@@ -124,7 +124,7 @@ var SyncCacheClientModule = Class.extend(EventReceiver, {
     start: function(options, callback) {
         if (!this.started) {
             this.configurationScan.scan();
-            this.applicationContext.process();
+            this.iocContext.process();
             this.getClientCacheService().addedEventPropagator(this);
 
             var config = this.getConfig();
@@ -132,7 +132,7 @@ var SyncCacheClientModule = Class.extend(EventReceiver, {
                 config.syncCacheIps = options.syncCacheIps;
             }
             console.log("Starting sync cache client...");
-            this.applicationContext.initialize(function(error) {
+            this.iocContext.initialize(function(error) {
                 if (!error){
                     console.log("Sync cache client successfully started");
                     callback();

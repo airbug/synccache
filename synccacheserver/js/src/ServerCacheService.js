@@ -11,6 +11,7 @@
 //@Require('Obj')
 //@Require('TypeUtil')
 //@Require('bugflow.BugFlow')
+//@Require('bugmeta.BugMeta')
 //@Require('synccache.SyncCacheDefines')
 //@Require('synccacheserver.CacheException')
 
@@ -31,6 +32,7 @@ var LockStriped         = bugpack.require('LockStriped');
 var Obj                 = bugpack.require('Obj');
 var TypeUtil            = bugpack.require('TypeUtil');
 var BugFlow             = bugpack.require('bugflow.BugFlow');
+var BugMeta             = bugpack.require('bugmeta.BugMeta');
 var SyncCacheDefines    = bugpack.require('synccache.SyncCacheDefines');
 var CacheException      = bugpack.require('synccacheserver.CacheException');
 
@@ -39,6 +41,7 @@ var CacheException      = bugpack.require('synccacheserver.CacheException');
 // Simplify References
 //-------------------------------------------------------------------------------
 
+var bugmeta             = BugMeta.context();
 var $forEachParallel    = BugFlow.$forEachParallel;
 var $if                 = BugFlow.$if;
 var $series             = BugFlow.$series;
@@ -141,7 +144,11 @@ var ServerCacheService = Class.extend(Obj, {
      */
     add: function(consumer, key, value, options, callback) {
         var _this = this;
-        this.bugAtomic.operation(key, "write", ["write", "read"], true, function(operation) {
+        var locks = ["write", "read"];
+        if (options.bypassLocks) {
+            locks = [];
+        }
+        this.bugAtomic.operation(key, "write", locks, false, function(operation) {
             $series([
                 $task(function(flow) {
                     if (!_this.cacheManager.hasCache(key)) {
@@ -179,7 +186,11 @@ var ServerCacheService = Class.extend(Obj, {
         // consumers that they have been unsynced
 
         var _this = this;
-        this.bugAtomic.operation(key, "write", ["write", "read"], true, function(operation) {
+        var locks = ["write", "read"];
+        if (options.bypassLocks) {
+            locks = [];
+        }
+        this.bugAtomic.operation(key, "write", locks, false, function(operation) {
             $series([
                 $task(function(flow) {
                     _this.cacheManager.removeCache(key);
@@ -216,7 +227,13 @@ var ServerCacheService = Class.extend(Obj, {
      */
     get: function(consumer, key, options, callback) {
         var _this = this;
-        this.bugAtomic.operation(key, "read", ["read"], true, function(operation) {
+        var locks = ["read"];
+        if (options.bypassLocks) {
+            locks = [];
+        } else if (options.sync) {
+            locks.push("write");
+        }
+        this.bugAtomic.operation(key, "read", locks, true, function(operation) {
             var value = undefined;
             $series([
                 $task(function(flow) {
@@ -269,7 +286,11 @@ var ServerCacheService = Class.extend(Obj, {
      */
     set: function(consumer, key, value, options, callback) {
         var _this = this;
-        this.bugAtomic.operation(key, "write", ["read", "write"], true, function(operation) {
+        var locks = ["write", "read"];
+        if (options.bypassLocks) {
+            locks = [];
+        }
+        this.bugAtomic.operation(key, "write", locks, false, function(operation) {
             $series([
                 $task(function(flow) {
                     _this.setCache(key, value, options.consistency, function(error) {
@@ -298,7 +319,11 @@ var ServerCacheService = Class.extend(Obj, {
      */
     sync: function(consumer, key, options, callback) {
         var _this = this;
-        this.bugAtomic.operation(key, "write", ["write"], true, function(operation) {
+        var locks = ["write"];
+        if (options.bypassLocks) {
+            locks = [];
+        }
+        this.bugAtomic.operation(key, "read", locks, true, function(operation) {
             _this.consumerManager.syncConsumerForCacheKey(key, consumer);
             operation.complete();
             callback();
@@ -328,7 +353,11 @@ var ServerCacheService = Class.extend(Obj, {
      */
     unsync: function(consumer, key, options, callback) {
         var _this = this;
-        this.bugAtomic.operation(key, "write", ["write"], true, function(operation) {
+        var locks = ["write"];
+        if (options.bypassLocks) {
+            locks = [];
+        }
+        this.bugAtomic.operation(key, "read", locks, true, function(operation) {
             _this.consumerManager.unsyncConsumerForCacheKey(key, consumer);
             operation.complete();
             callback();
@@ -363,6 +392,21 @@ var ServerCacheService = Class.extend(Obj, {
         }
     }
 });
+
+
+//-------------------------------------------------------------------------------
+// BugMeta
+//-------------------------------------------------------------------------------
+
+//TODO BRN: Must finish bugservice before this will work
+/*bugmeta.annotate(ServerCacheService).with(
+    service().methods([
+        method("acquireLock").params([
+            param("key"),
+            param("type")
+        ])
+    ])
+);*/
 
 
 //-------------------------------------------------------------------------------

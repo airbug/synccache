@@ -35,23 +35,22 @@ var nodejs = enableModule('nodejs');
 //-------------------------------------------------------------------------------
 
 buildProperties({
-    syncbugserver: {
+    synccacheserver: {
         packageJson: {
             name: "synccacheserver",
             version: "0.0.1",
-            main: "./lib/SyncbugServer.js",
             dependencies: {
                 bugpack: "https://s3.amazonaws.com/airbug/bugpack-0.0.5.tgz",
                 express: "3.2.x",
                 "socket.io": "0.9.x"
             },
             scripts: {
-                start: "node ./scripts/syncbug-server-application-start.js"
+                start: "node ./scripts/sync-cache-server-application-start.js"
             }
         },
         sourcePaths: [
-            "./projects/syncbugserver/js/src",
-            "../bugjs/projects/annotate/js/src",
+            "./projects/synccacheserver/js/src",
+            "../bugjs/projects/bugmeta/js/src",
             "../bugjs/projects/bugcall/js/src",
             "../bugjs/projects/bugflow/js/src",
             "../bugjs/projects/bugfs/js/src",
@@ -67,7 +66,7 @@ buildProperties({
             "../bugunit/projects/bugunit/js/src"
         ],
         scriptPaths: [
-            "./projects/airbugserver/js/scripts",
+            "./projects/synccacheserver/js/scripts",
             "../bugunit/projects/bugunit/js/scripts"
         ],
         testPaths: [
@@ -77,15 +76,15 @@ buildProperties({
             "../bugjs/projects/bugroutes/js/test"
         ]
     },
-    syncbugserverclient: {
+    synccacheclient: {
         clientJson: {
             name: "synccache",
             version: "0.0.1",
             main: "./lib/SyncCacheClientModule.js"
         },
         sourcePaths: [
-            "./projects/syncbugserverclient/js/src",
-            "../bugjs/projects/annotate/js/src",
+            "./projects/synccacheclient/js/src",
+            "../bugjs/projects/bugmeta/js/src",
             "../bugjs/projects/bugcall/js/src",
             "../bugjs/projects/bugflow/js/src",
             "../bugjs/projects/bugfs/js/src",
@@ -101,7 +100,7 @@ buildProperties({
             "../bugunit/projects/bugunit/js/src"
         ],
         scriptPaths: [
-            "./projects/syncbugserverclient/js/scripts",
+            "./projects/synccacheclient/js/scripts",
             "../bugunit/projects/bugunit/js/scripts"
         ],
         testPaths: [
@@ -145,17 +144,17 @@ buildTarget('local').buildFlow(
             series([
                 targetTask('createNodePackage', {
                     properties: {
-                        packageJson: buildProject.getProperty("syncbugserver.packageJson"),
-                        sourcePaths: buildProject.getProperty("syncbugserver.sourcePaths"),
-                        scriptPaths: buildProject.getProperty("syncbugserver.scriptPaths"),
-                        testPaths: buildProject.getProperty("syncbugserver.testPaths")
+                        packageJson: buildProject.getProperty("synccacheserver.packageJson"),
+                        sourcePaths: buildProject.getProperty("synccacheserver.sourcePaths"),
+                        scriptPaths: buildProject.getProperty("synccacheserver.scriptPaths"),
+                        testPaths: buildProject.getProperty("synccacheserver.testPaths")
                     }
                 }),
                 targetTask('generateBugPackRegistry', {
                     init: function(task, buildProject, properties) {
                         var nodePackage = nodejs.findNodePackage(
-                            buildProject.getProperty("syncbugserver.packageJson.name"),
-                            buildProject.getProperty("syncbugserver.packageJson.version")
+                            buildProject.getProperty("synccacheserver.packageJson.name"),
+                            buildProject.getProperty("synccacheserver.packageJson.version")
                         );
                         task.updateProperties({
                             sourceRoot: nodePackage.getBuildPath()
@@ -164,15 +163,15 @@ buildTarget('local').buildFlow(
                 }),
                 targetTask('packNodePackage', {
                     properties: {
-                        packageName: buildProject.getProperty("syncbugserver.packageJson.name"),
-                        packageVersion: buildProject.getProperty("syncbugserver.packageJson.version")
+                        packageName: buildProject.getProperty("synccacheserver.packageJson.name"),
+                        packageVersion: buildProject.getProperty("synccacheserver.packageJson.version")
                     }
                 }),
                 targetTask('startNodeModuleTests', {
                     init: function(task, buildProject, properties) {
                         var packedNodePackage = nodejs.findPackedNodePackage(
-                            buildProject.getProperty("syncbugserver.packageJson.name"),
-                            buildProject.getProperty("syncbugserver.packageJson.version")
+                            buildProject.getProperty("synccacheserver.packageJson.name"),
+                            buildProject.getProperty("synccacheserver.packageJson.version")
                         );
                         task.updateProperties({
                             modulePath: packedNodePackage.getFilePath()
@@ -186,8 +185,8 @@ buildTarget('local').buildFlow(
                 }),
                 targetTask("s3PutFile", {
                     init: function(task, buildProject, properties) {
-                        var packedNodePackage = nodejs.findPackedNodePackage(buildProject.getProperty("syncbugserver.packageJson.name"),
-                            buildProject.getProperty("syncbugserver.packageJson.version"));
+                        var packedNodePackage = nodejs.findPackedNodePackage(buildProject.getProperty("synccacheserver.packageJson.name"),
+                            buildProject.getProperty("synccacheserver.packageJson.version"));
                         task.updateProperties({
                             file: packedNodePackage.getFilePath(),
                             options: {
@@ -203,17 +202,17 @@ buildTarget('local').buildFlow(
             series([
                 targetTask('createNodePackage', {
                     properties: {
-                        packageJson: buildProject.getProperty("syncbugserverclient.packageJson"),
-                        sourcePaths: buildProject.getProperty("syncbugserverclient.sourcePaths"),
-                        scriptPaths: buildProject.getProperty("syncbugserverclient.scriptPaths"),
-                        testPaths: buildProject.getProperty("syncbugserverclient.testPaths")
+                        packageJson: buildProject.getProperty("synccacheclient.packageJson"),
+                        sourcePaths: buildProject.getProperty("synccacheclient.sourcePaths"),
+                        scriptPaths: buildProject.getProperty("synccacheclient.scriptPaths"),
+                        testPaths: buildProject.getProperty("synccacheclient.testPaths")
                     }
                 }),
                 targetTask('generateBugPackRegistry', {
                     init: function(task, buildProject, properties) {
                         var nodePackage = nodejs.findNodePackage(
-                            buildProject.getProperty("syncbugserverclient.packageJson.name"),
-                            buildProject.getProperty("syncbugserverclient.packageJson.version")
+                            buildProject.getProperty("synccacheclient.packageJson.name"),
+                            buildProject.getProperty("synccacheclient.packageJson.version")
                         );
                         task.updateProperties({
                             sourceRoot: nodePackage.getBuildPath()
@@ -222,15 +221,15 @@ buildTarget('local').buildFlow(
                 }),
                 targetTask('packNodePackage', {
                     properties: {
-                        packageName: buildProject.getProperty("syncbugserverclient.packageJson.name"),
-                        packageVersion: buildProject.getProperty("syncbugserverclient.packageJson.version")
+                        packageName: buildProject.getProperty("synccacheclient.packageJson.name"),
+                        packageVersion: buildProject.getProperty("synccacheclient.packageJson.version")
                     }
                 }),
                 targetTask('startNodeModuleTests', {
                     init: function(task, buildProject, properties) {
                         var packedNodePackage = nodejs.findPackedNodePackage(
-                            buildProject.getProperty("syncbugserverclient.packageJson.name"),
-                            buildProject.getProperty("syncbugserverclient.packageJson.version")
+                            buildProject.getProperty("synccacheclient.packageJson.name"),
+                            buildProject.getProperty("synccacheclient.packageJson.version")
                         );
                         task.updateProperties({
                             modulePath: packedNodePackage.getFilePath()
@@ -244,8 +243,8 @@ buildTarget('local').buildFlow(
                 }),
                 targetTask("s3PutFile", {
                     init: function(task, buildProject, properties) {
-                        var packedNodePackage = nodejs.findPackedNodePackage(buildProject.getProperty("syncbugserverclient.packageJson.name"),
-                            buildProject.getProperty("syncbugserverclient.packageJson.version"));
+                        var packedNodePackage = nodejs.findPackedNodePackage(buildProject.getProperty("synccacheclient.packageJson.name"),
+                            buildProject.getProperty("synccacheclient.packageJson.version"));
                         task.updateProperties({
                             file: packedNodePackage.getFilePath(),
                             options: {

@@ -9,7 +9,6 @@
 
 //@Require('Class')
 //@Require('Obj')
-//@Require('annotate.Annotate')
 //@Require('bugatomic.BugAtomic')
 //@Require('bugatomic.LockOperator')
 //@Require('bugcall.BugCallServer')
@@ -21,6 +20,7 @@
 //@Require('bugioc.IConfiguration')
 //@Require('bugioc.ModuleAnnotation')
 //@Require('bugioc.PropertyAnnotation')
+//@Require('bugmeta.BugMeta')
 //@Require('bugroutes.BugCallRouter')
 //@Require('express.ExpressApp')
 //@Require('express.ExpressServer')
@@ -52,7 +52,6 @@ var path                    = require('path');
 
 var Class                       = bugpack.require('Class');
 var Obj                         = bugpack.require('Obj');
-var Annotate                    = bugpack.require('annotate.Annotate');
 var BugAtomic                   = bugpack.require('bugatomic.BugAtomic');
 var LockOperator                = bugpack.require('bugatomic.LockOperator');
 var BugCallServer               = bugpack.require('bugcall.BugCallServer');
@@ -64,6 +63,7 @@ var ConfigurationAnnotation     = bugpack.require('bugioc.ConfigurationAnnotatio
 var IConfiguration              = bugpack.require('bugioc.IConfiguration');
 var ModuleAnnotation            = bugpack.require('bugioc.ModuleAnnotation');
 var PropertyAnnotation          = bugpack.require('bugioc.PropertyAnnotation');
+var BugMeta                     = bugpack.require('bugmeta.BugMeta');
 var BugCallRouter               = bugpack.require('bugroutes.BugCallRouter');
 var ExpressApp                  = bugpack.require('express.ExpressApp');
 var ExpressServer               = bugpack.require('express.ExpressServer');
@@ -83,7 +83,7 @@ var ServerCacheService          = bugpack.require('synccacheserver.ServerCacheSe
 // Simplify References
 //-------------------------------------------------------------------------------
 
-var annotate                = Annotate.annotate;
+var bugmeta = BugMeta.context();
 var arg                     = ArgAnnotation.arg;
 var configuration           = ConfigurationAnnotation.configuration;
 var module                  = ModuleAnnotation.module;
@@ -423,10 +423,10 @@ Class.implement(SyncCacheServerConfiguration, IConfiguration);
 
 
 //-------------------------------------------------------------------------------
-// Annotate
+// BugMeta
 //-------------------------------------------------------------------------------
 
-annotate(SyncCacheServerConfiguration).with(
+bugmeta.annotate(SyncCacheServerConfiguration).with(
     configuration().modules([
 
 
@@ -443,11 +443,11 @@ annotate(SyncCacheServerConfiguration).with(
 
         module("expressApp")
             .args([
-                arg("config").ref("config")
+                arg().ref("config")
             ]),
         module("expressServer")
             .args([
-                arg("expressApp").ref("expressApp")
+                arg().ref("expressApp")
             ]),
 
 
@@ -464,13 +464,13 @@ annotate(SyncCacheServerConfiguration).with(
 
         module("socketIoManager")
             .args([
-                arg("socketIoServer").ref("socketIoServer")
+                arg().ref("socketIoServer")
             ]),
         module("socketIoServer")
             .args([
-                arg("config").ref("socketIoServerConfig"),
-                arg("expressServer").ref("expressServer"),
-                arg("handshaker").ref("handshaker")
+                arg().ref("socketIoServerConfig"),
+                arg().ref("expressServer"),
+                arg().ref("handshaker")
             ]),
         module("socketIoServerConfig"),
 
@@ -481,15 +481,15 @@ annotate(SyncCacheServerConfiguration).with(
 
         module("bugCallRouter")
             .args([
-                arg("bugCallServer").ref("bugCallServer")
+                arg().ref("bugCallServer")
             ]),
         module("bugCallServer")
             .args([
-                arg("callServer").ref("callServer")
+                arg().ref("callServer")
             ]),
         module("callServer")
             .args([
-                arg("socketIoManager").ref("socketIoManager")
+                arg().ref("socketIoManager")
             ]),
 
 
@@ -499,9 +499,9 @@ annotate(SyncCacheServerConfiguration).with(
 
         module("serverCacheController")
             .args([
-                arg("bugCallRouter").ref("bugCallRouter"),
-                arg("consumerManager").ref("consumerManager"),
-                arg("serverCacheService").ref("serverCacheService")
+                arg().ref("bugCallRouter"),
+                arg().ref("consumerManager"),
+                arg().ref("serverCacheService")
             ]),
 
 
@@ -511,10 +511,10 @@ annotate(SyncCacheServerConfiguration).with(
 
         module("serverCacheService")
             .args([
-                arg("cacheManager").ref("cacheManager"),
-                arg("consumerManager").ref("consumerManager"),
-                arg("lockManager").ref("lockManager"),
-                arg("clientCacheApi").ref("clientCacheApi")
+                arg().ref("cacheManager"),
+                arg().ref("consumerManager"),
+                arg().ref("lockManager"),
+                arg().ref("clientCacheApi")
             ]),
 
 
@@ -525,7 +525,7 @@ annotate(SyncCacheServerConfiguration).with(
         module("cacheManager"),
         module("consumerManager")
             .args([
-                arg("bugCallServer")
+                arg()
             ]),
         module("lockManager"),
 
@@ -536,7 +536,7 @@ annotate(SyncCacheServerConfiguration).with(
 
         module("clientCacheApi")
             .args([
-                arg("consumerManager").ref("consumerManager")
+                arg().ref("consumerManager")
             ])
     ])
 );

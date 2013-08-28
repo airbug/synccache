@@ -9,13 +9,13 @@
 
 //@Require('Class')
 //@Require('Obj')
-//@Require('annotate.Annotate')
 //@Require('bugflow.BugFlow')
 //@Require('bugioc.ArgAnnotation')
 //@Require('bugioc.ConfigurationAnnotation')
 //@Require('bugioc.IConfiguration')
 //@Require('bugioc.ModuleAnnotation')
 //@Require('bugioc.PropertyAnnotation')
+//@Require('bugmeta.BugMeta')
 //@Require('bugroutes.BugCallRouter')
 //@Require('socketio:factoryserver.ServerSocketIoFactory')
 //@Require('synccacheclient.CacheManager')
@@ -41,13 +41,13 @@ var path                    = require('path');
 
 var Class                       = bugpack.require('Class');
 var Obj                         = bugpack.require('Obj');
-var Annotate                    = bugpack.require('annotate.Annotate');
 var BugFlow                     = bugpack.require('bugflow.BugFlow');
 var ArgAnnotation               = bugpack.require('bugioc.ArgAnnotation');
 var ConfigurationAnnotation     = bugpack.require('bugioc.ConfigurationAnnotation');
 var IConfiguration              = bugpack.require('bugioc.IConfiguration');
 var ModuleAnnotation            = bugpack.require('bugioc.ModuleAnnotation');
 var PropertyAnnotation          = bugpack.require('bugioc.PropertyAnnotation');
+var BugMeta                     = bugpack.require('bugmeta.BugMeta');
 var BugCallRouter               = bugpack.require('bugroutes.BugCallRouter');
 var ServerSocketIoFactory       = bugpack.require('socketio:factoryserver.ServerSocketIoFactory');
 var CacheManager                = bugpack.require('synccacheclient.CacheManager');
@@ -61,12 +61,11 @@ var ServerCacheApi              = bugpack.require('synccacheclient.ServerCacheAp
 // Simplify References
 //-------------------------------------------------------------------------------
 
-var annotate                = Annotate.annotate;
 var arg                     = ArgAnnotation.arg;
+var bugmeta                 = BugMeta.context();
 var configuration           = ConfigurationAnnotation.configuration;
 var module                  = ModuleAnnotation.module;
 var property                = PropertyAnnotation.property;
-
 var $parallel               = BugFlow.$parallel;
 var $series                 = BugFlow.$series;
 var $task                   = BugFlow.$task;
@@ -202,10 +201,10 @@ Class.implement(SyncCacheClientConfiguration, IConfiguration);
 
 
 //-------------------------------------------------------------------------------
-// Annotate
+// BugMeta
 //-------------------------------------------------------------------------------
 
-annotate(SyncCacheClientConfiguration).with(
+bugmeta.annotate(SyncCacheClientConfiguration).with(
     configuration().modules([
 
 
@@ -216,7 +215,7 @@ annotate(SyncCacheClientConfiguration).with(
         module("config"),
         module("serverCacheApi")
             .args([
-                arg("consumerManager").ref("consumerManager")
+                arg().ref("consumerManager")
             ]),
 
 
@@ -233,7 +232,7 @@ annotate(SyncCacheClientConfiguration).with(
 
         module("bugCallRouter")
             .args([
-                arg("consumerManager").ref("bugCallRequestEventDispatcher")
+                arg().ref("bugCallRequestEventDispatcher")
             ]),
 
 
@@ -243,8 +242,8 @@ annotate(SyncCacheClientConfiguration).with(
 
         module("clientCacheController")
             .args([
-                arg("bugCallRouter").ref("bugCallRouter"),
-                arg("clientCacheService").ref("clientCacheService")
+                arg().ref("bugCallRouter"),
+                arg().ref("clientCacheService")
             ]),
 
 
@@ -254,7 +253,7 @@ annotate(SyncCacheClientConfiguration).with(
 
         module("clientCacheService")
             .args([
-                arg("cacheManager").ref("cacheManager")
+                arg().ref("cacheManager")
             ]),
 
 
@@ -265,9 +264,9 @@ annotate(SyncCacheClientConfiguration).with(
         module("cacheManager"),
         module("consumerManager")
             .args([
-                arg("config").ref("config"),
-                arg("cacheManager").ref("cacheManager"),
-                arg("serverSocketIoFactory").ref("serverSocketIoFactory")
+                arg().ref("config"),
+                arg().ref("cacheManager"),
+                arg().ref("serverSocketIoFactory")
             ])
     ])
 );
