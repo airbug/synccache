@@ -10,26 +10,32 @@
 //@Require('Class')
 //@Require('EventReceiver')
 //@Require('Proxy')
-//@Require('bugioc.IocContext')
+//@Require('bugioc.ConfigurationAnnotationProcessor')
 //@Require('bugioc.ConfigurationScan')
+//@Require('bugioc.ModuleAnnotationProcessor')
+//@Require('bugioc.ModuleScan')
+//@Require('bugioc.IocContext')
 
 
 //-------------------------------------------------------------------------------
 // Common Modules
 //-------------------------------------------------------------------------------
 
-var bugpack = require('bugpack').context();
+var bugpack                             = require('bugpack').context();
 
 
 //-------------------------------------------------------------------------------
 // BugPack
 //-------------------------------------------------------------------------------
 
-var Class               = bugpack.require('Class');
-var EventReceiver       = bugpack.require('EventReceiver');
-var Proxy               = bugpack.require('Proxy');
-var IocContext          = bugpack.require('bugioc.IocContext');
-var ConfigurationScan   = bugpack.require('bugioc.ConfigurationScan');
+var Class                               = bugpack.require('Class');
+var EventReceiver                       = bugpack.require('EventReceiver');
+var Proxy                               = bugpack.require('Proxy');
+var IocContext                          = bugpack.require('bugioc.IocContext');
+var ConfigurationAnnotationProcessor    = bugpack.require('bugioc.ConfigurationAnnotationProcessor');
+var ConfigurationScan                   = bugpack.require('bugioc.ConfigurationScan');
+var ModuleAnnotationProcessor           = bugpack.require('bugioc.ModuleAnnotationProcessor');
+var ModuleScan                          = bugpack.require('bugioc.ModuleScan');
 
 
 //-------------------------------------------------------------------------------
@@ -55,13 +61,19 @@ var SyncCacheClientModule = Class.extend(EventReceiver, {
          * @private
          * @type {IocContext}
          */
-        this.iocContext = new IocContext();
+        this.iocContext         = new IocContext();
 
         /**
          * @private
          * @type {ConfigurationScan}
          */
-        this.configurationScan  = new ConfigurationScan(this.iocContext);
+        this.configurationScan  = new ConfigurationScan(new ConfigurationAnnotationProcessor(this.iocContext));
+
+        /**
+         * @private
+         * @type {ModuleScan}
+         */
+        this.moduleScan         = new ModuleScan(new ModuleAnnotationProcessor(this.iocContext));
 
         /**
          * @private
@@ -93,21 +105,21 @@ var SyncCacheClientModule = Class.extend(EventReceiver, {
      * }}
      */
     getConfig: function() {
-        return this.iocContext.generateModuleByName("config");
+        return this.iocContext.getModuleByName("config");
     },
 
     /**
      * @return {ServerCacheApi}
      */
     getServerCacheApi: function() {
-        return this.iocContext.generateModuleByName("serverCacheApi");
+        return this.iocContext.getModuleByName("serverCacheApi");
     },
 
     /**
      * @return {ClientCacheService}
      */
     getClientCacheService: function() {
-        return this.iocContext.generateModuleByName("clientCacheService");
+        return this.iocContext.getModuleByName("clientCacheService");
     },
 
 
@@ -124,6 +136,7 @@ var SyncCacheClientModule = Class.extend(EventReceiver, {
     start: function(options, callback) {
         if (!this.started) {
             this.configurationScan.scan();
+            this.moduleScan.scan();
             this.iocContext.process();
             this.getClientCacheService().addedEventPropagator(this);
 
