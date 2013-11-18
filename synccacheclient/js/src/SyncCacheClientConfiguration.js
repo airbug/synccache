@@ -16,7 +16,7 @@
 //@Require('bugioc.ModuleAnnotation')
 //@Require('bugioc.PropertyAnnotation')
 //@Require('bugmeta.BugMeta')
-//@Require('bugroutes.BugCallRouter')
+//@Require('bugroute:bugcall.BugCallRouter')
 //@Require('socketio:factoryserver.ServerSocketIoFactory')
 //@Require('synccacheclient.CacheManager')
 //@Require('synccacheclient.ClientCacheController')
@@ -48,7 +48,7 @@ var IConfiguration              = bugpack.require('bugioc.IConfiguration');
 var ModuleAnnotation            = bugpack.require('bugioc.ModuleAnnotation');
 var PropertyAnnotation          = bugpack.require('bugioc.PropertyAnnotation');
 var BugMeta                     = bugpack.require('bugmeta.BugMeta');
-var BugCallRouter               = bugpack.require('bugroutes.BugCallRouter');
+var BugCallRouter               = bugpack.require('bugroute:bugcall.BugCallRouter');
 var ServerSocketIoFactory       = bugpack.require('socketio:factoryserver.ServerSocketIoFactory');
 var CacheManager                = bugpack.require('synccacheclient.CacheManager');
 var ClientCacheController       = bugpack.require('synccacheclient.ClientCacheController');

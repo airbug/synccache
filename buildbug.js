@@ -56,7 +56,7 @@ buildProperties({
             "../bugjs/projects/bugfs/js/src",
             "../bugjs/projects/bugioc/js/src",
             "../bugjs/projects/bugjs/js/src",
-            "../bugjs/projects/bugroutes/js/src",
+            "../bugjs/projects/bugroute/bugjars/bugcall/js/src",
             "../bugjs/projects/bugtrace/js/src",
             "../bugjs/projects/express/js/src",
             "../bugjs/projects/handshaker/js/src",
@@ -73,7 +73,7 @@ buildProperties({
             "../bugjs/projects/bugflow/js/test",
             "../bugjs/projects/bugjs/js/test",
             "../bugjs/projects/bugtrace/js/test",
-            "../bugjs/projects/bugroutes/js/test"
+            "../bugjs/projects/bugroute/bugjars/bugcall/js/test"
         ]
     },
     synccacheclient: {
@@ -90,7 +90,7 @@ buildProperties({
             "../bugjs/projects/bugfs/js/src",
             "../bugjs/projects/bugioc/js/src",
             "../bugjs/projects/bugjs/js/src",
-            "../bugjs/projects/bugroutes/js/src",
+            "../bugjs/projects/bugroute/bugjars/bugcall/js/src",
             "../bugjs/projects/bugtrace/js/src",
             "../bugjs/projects/express/js/src",
             "../bugjs/projects/socketio/bugjars/client/js/src",
@@ -107,7 +107,7 @@ buildProperties({
             "../bugjs/projects/bugflow/js/test",
             "../bugjs/projects/bugjs/js/test",
             "../bugjs/projects/bugtrace/js/test",
-            "../bugjs/projects/bugroutes/js/test"
+            "../bugjs/projects/bugroute/bugjars/bugcall/js/test"
         ]
     }
 });
