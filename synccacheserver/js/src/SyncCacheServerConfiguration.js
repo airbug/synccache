@@ -156,11 +156,18 @@ var SyncCacheServerConfiguration = Class.extend(Obj, {
 
 
     //-------------------------------------------------------------------------------
-    // Configuration Lifecycle
+    // IConfiguration Implementation
     //-------------------------------------------------------------------------------
 
     /**
-     * @param {function(error)} callback
+     * @param {function(Throwable=)} callback
+     */
+    deinitializeConfiguration: function(callback) {
+        callback();
+    },
+
+    /**
+     * @param {function(Throwable=)} callback
      */
     initializeConfiguration: function(callback) {
         var _this = this;
@@ -232,6 +239,11 @@ var SyncCacheServerConfiguration = Class.extend(Obj, {
             })
         ]).execute(callback);
     },
+
+
+    //-------------------------------------------------------------------------------
+    // Public Methods
+    //-------------------------------------------------------------------------------
 
     /**
      * @private
@@ -427,8 +439,7 @@ Class.implement(SyncCacheServerConfiguration, IConfiguration);
 //-------------------------------------------------------------------------------
 
 bugmeta.annotate(SyncCacheServerConfiguration).with(
-    configuration().modules([
-
+    configuration("syncCacheServerConfiguration").modules([
 
         //-------------------------------------------------------------------------------
         // Common
